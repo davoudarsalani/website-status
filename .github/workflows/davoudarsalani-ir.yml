@@ -1,4 +1,4 @@
-name: Davoudarsalani
+name: davoudarsalani-ir
 
 on:
   workflow_dispatch:
