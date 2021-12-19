@@ -1,0 +1,55 @@
+name: Website Status
+
+inputs:
+  url:
+    required: true
+  timeout:
+    required: false
+    default: 20
+  retries:
+    required: false
+    default: 10
+  notify_on_fail:
+    required: false
+    default: true
+
+  ## secrets
+  TELEGRAM_TOKEN:
+    required: true
+  TELEGRAM_TO:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checking status
+      id: checking-status
+      shell: bash
+      run: |
+        failed_status_codes=''
+        for ((try=1; try<=${{ inputs.retries }}; try++)); {
+            status_code="$(curl -s -I --connect-timeout ${{ inputs.timeout }} ${{ inputs.url }} 2>&1 | awk '/HTTP\// {print $2}')"  ## NOTE do NOT replace $2 with $NF
+            if (( status_code == 200 )) || (( status_code == 301 )); then
+                printf 'Status OK: %s, on try %s\n' "$status_code" "$try"
+                exit 0
+            fi
+            failed_status_codes+="${status_code}, "
+            printf 'Status ERROR: %s, on try %s\n' "$status_code" "$try"
+            sleep 10
+        }
+        # exit 1
+        failed_status_codes="${failed_status_codes%,*}"
+        echo "failed_status_codes=$failed_status_codes" >> $GITHUB_ENV
+        echo "::set-output name=failed::true"
+
+    - name: Notifying
+      if: ${{ steps.checking-status.outputs.failed == 'true' && inputs.notify_on_fail == 'true' }}
+      uses: davoudarsalani/action-notify@master
+      with:
+        telegram_message: |
+          Checking status failed after ${{ inputs.retries }} tries
+          URL: ${{ inputs.url }}
+          Failed status codes:
+          ${{ env.failed_status_codes }}
+        TELEGRAM_TOKEN: ${{ inputs.TELEGRAM_TOKEN }}
+        TELEGRAM_TO: ${{ inputs.TELEGRAM_TO }}

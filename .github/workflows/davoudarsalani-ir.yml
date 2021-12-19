@@ -1,0 +1,20 @@
+name: Davoudarsalani
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */2 * * *'  ## every 2 hours
+
+jobs:
+  davoudarsalani-ir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Checking status
+        uses: ./.github/actions
+        with:
+          url: 'https://www.davoudarsalani.ir'
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_TO: ${{ secrets.TELEGRAM_TO }}
